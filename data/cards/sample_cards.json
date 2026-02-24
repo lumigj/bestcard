@@ -1,0 +1,40 @@
+[
+  {
+    "card_id": "blue_cash_plus",
+    "card_name": "Blue Cash Plus",
+    "annual_fee": 0,
+    "foreign_txn_fee_rate": 0.03,
+    "base_cashback_rate": 0.01,
+    "reward_rules": [
+      {"category": "grocery", "cashback_rate": 0.04, "cap_amount": 6000, "cap_period": "year"},
+      {"category": "online_shopping", "cashback_rate": 0.03},
+      {"category": "dining", "cashback_rate": 0.02}
+    ],
+    "notes": "4% grocery up to yearly cap; 3% online shopping; 2% dining."
+  },
+  {
+    "card_id": "smart_dining",
+    "card_name": "Smart Dining",
+    "annual_fee": 95,
+    "foreign_txn_fee_rate": 0,
+    "base_cashback_rate": 0.01,
+    "reward_rules": [
+      {"category": "dining", "cashback_rate": 0.05},
+      {"category": "travel", "cashback_rate": 0.03}
+    ],
+    "notes": "5% dining all year; no foreign transaction fee."
+  },
+  {
+    "card_id": "global_travel",
+    "card_name": "Global Travel",
+    "annual_fee": 120,
+    "foreign_txn_fee_rate": 0,
+    "base_cashback_rate": 0.015,
+    "reward_rules": [
+      {"category": "travel", "cashback_rate": 0.04},
+      {"category": "gas", "cashback_rate": 0.03},
+      {"category": "grocery", "cashback_rate": 0.02}
+    ],
+    "notes": "Travel-focused card with no foreign transaction fee."
+  }
+]

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bestcard"
+version = "0.1.0"
+description = "Best credit card selector with deterministic engine, RAG evidence, and Telegram bot"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "pydantic>=2.11.0",
+  "pydantic-settings>=2.10.0",
+  "python-dotenv>=1.1.0",
+  "python-telegram-bot>=22.0",
+]
+
+[project.optional-dependencies]
+llm = [
+  "openai>=1.65.0",
+]
+dev = [
+  "pytest>=8.4.0",
+]
+
+[project.scripts]
+bestcard-api = "bestcard.api.app:run"
+bestcard-bot = "bestcard.integrations.telegram_bot:main"
+bestcard-ingest = "bestcard.rag.ingest:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
