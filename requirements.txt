@@ -1,0 +1,13 @@
+# Runtime
+fastapi>=0.116.0
+uvicorn[standard]>=0.35.0
+pydantic>=2.11.0
+pydantic-settings>=2.10.0
+python-dotenv>=1.1.0
+python-telegram-bot>=22.0
+
+# LLM
+openai>=1.65.0
+
+# Dev/Test
+pytest>=8.4.0
