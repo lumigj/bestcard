@@ -7,11 +7,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from bestcard.agents.orchestrator import RecommendationOrchestrator
-from bestcard.domain.models import CardPolicy
-from bestcard.rag.ingest import main as ingest_rag
-from bestcard.repository.policy_store import PolicyStore
-from bestcard.schemas.requests import RecommendRequest
+from bestcard import RecommendationOrchestrator
+from bestcard import CardPolicy
+from bestcard import main as ingest_rag
+from bestcard import PolicyStore
+from bestcard import RecommendRequest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BASE_POLICY_PATH = PROJECT_ROOT / "data" / "cards" / "sample_cards.json"

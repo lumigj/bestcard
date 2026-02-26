@@ -1,6 +1,6 @@
-from bestcard.domain.models import SpendScenario
-from bestcard.engine.selectors import rank_cards
-from bestcard.repository.policy_store import PolicyStore
+from bestcard import SpendScenario
+from bestcard import rank_cards
+from bestcard import PolicyStore
 
 
 def t_rank_cards_prefers_highest_net_reward() -> None:

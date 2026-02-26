@@ -1,40 +1,61 @@
-import re
+import json
+import os
 
 from bestcard.domain.models import SpendScenario
 
-CATEGORY_KEYWORDS = {
-    "grocery": ["grocery", "supermarket", "超市", "买菜"],
-    "dining": ["dining", "restaurant", "food", "餐厅", "吃饭", "外卖"],
-    "travel": ["travel", "flight", "hotel", "机票", "酒店", "旅行"],
-    "gas": ["gas", "fuel", "加油"],
-    "online_shopping": ["online", "ecommerce", "amazon", "网购"],
-}
-
-FOREIGN_KEYWORDS = ["境外", "海外", "international", "abroad", "foreign"]
+ALLOWED_CATEGORIES = ["grocery", "dining", "travel", "gas", "online_shopping", "other"]
 
 
 class ScenarioParseError(ValueError):
     pass
 
 
-def _extract_amount(text: str) -> float | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:usd|\$|刀|块|元)?", text.lower())
-    if not match:
-        return None
-    return float(match.group(1))
+def _llm_extract_scenario(message: str, fallback_currency: str) -> dict:
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise ScenarioParseError(
+            "openai package is required for LLM parser. Install with: pip install -e '.[llm]'"
+        ) from exc
 
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise ScenarioParseError("OPENAI_API_KEY is missing for LLM parser.")
 
-def _extract_category(text: str) -> str:
-    lowered = text.lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        if any(keyword in lowered for keyword in keywords):
-            return category
-    return "other"
+    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
+    client = OpenAI(api_key=api_key)
 
+    system_prompt = (
+        "Extract a spending scenario from user message. "
+        "Return JSON only with keys: amount, category, is_foreign, currency, "
+        "include_annual_fee_proration, monthly_spend_estimate. "
+        "amount must be positive number. "
+        f"category must be one of: {', '.join(ALLOWED_CATEGORIES)}. "
+        "If unknown, set category='other'. "
+        "is_foreign must be boolean. "
+        "currency must be a short code like USD/CNY/EUR. "
+        "include_annual_fee_proration default false unless user explicitly asks annual fee sharing. "
+        "monthly_spend_estimate should be null if absent."
+    )
 
-def _is_foreign(text: str) -> bool:
-    lowered = text.lower()
-    return any(keyword in lowered for keyword in FOREIGN_KEYWORDS)
+    response = client.chat.completions.create(
+        model=model,
+        temperature=0,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message},
+        ],
+    )
+
+    content = response.choices[0].message.content
+    if not content:
+        raise ScenarioParseError("LLM returned empty content.")
+
+    data = json.loads(content)
+    if "currency" not in data or not data["currency"]:
+        data["currency"] = fallback_currency
+    return data
 
 
 def parse_scenario(
@@ -46,18 +67,38 @@ def parse_scenario(
     include_annual_fee_proration: bool = False,
     monthly_spend_estimate: float | None = None,
 ) -> SpendScenario:
-    parsed_amount = amount if amount is not None else _extract_amount(message)
-    if parsed_amount is None or parsed_amount <= 0:
-        raise ScenarioParseError("Could not parse amount from message.")
+    llm_result = _llm_extract_scenario(message=message, fallback_currency=currency)
 
-    parsed_category = category or _extract_category(message)
-    parsed_foreign = is_foreign if is_foreign is not None else _is_foreign(message)
+    parsed_amount = amount if amount is not None else llm_result.get("amount")
+    if parsed_amount is None or float(parsed_amount) <= 0:
+        raise ScenarioParseError("Could not parse a positive amount from message.")
+
+    parsed_category = category or str(llm_result.get("category", "other")).lower()
+    if parsed_category not in ALLOWED_CATEGORIES:
+        parsed_category = "other"
+
+    parsed_foreign = is_foreign if is_foreign is not None else bool(llm_result.get("is_foreign", False))
+
+    parsed_currency = currency or str(llm_result.get("currency", "USD")).upper()
+    parsed_include_proration = (
+        include_annual_fee_proration
+        if include_annual_fee_proration
+        else bool(llm_result.get("include_annual_fee_proration", False))
+    )
+    parsed_monthly_spend = (
+        monthly_spend_estimate
+        if monthly_spend_estimate is not None
+        else llm_result.get("monthly_spend_estimate")
+    )
+
+    if parsed_monthly_spend is not None:
+        parsed_monthly_spend = float(parsed_monthly_spend)
 
     return SpendScenario(
-        amount=parsed_amount,
+        amount=float(parsed_amount),
         category=parsed_category,
         is_foreign=parsed_foreign,
-        currency=currency,
-        include_annual_fee_proration=include_annual_fee_proration,
-        monthly_spend_estimate=monthly_spend_estimate,
+        currency=parsed_currency,
+        include_annual_fee_proration=parsed_include_proration,
+        monthly_spend_estimate=parsed_monthly_spend,
     )
